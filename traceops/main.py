@@ -20,13 +20,13 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
-
 @app.get("/")
 async def health():
     return {"status": "ok", "service": "traceops-lite"}
 
-# Routers added in later phases:
-# from traceops.api.chat import router as chat_router
-# from traceops.api.failure import router as failure_router
-# app.include_router(chat_router)
-# app.include_router(failure_router)
+
+from traceops.api.chat import router as chat_router
+from traceops.api.failure import router as failure_router
+
+app.include_router(chat_router)
+app.include_router(failure_router)
