@@ -1,4 +1,10 @@
+from phoenix.otel import register
+from openinference.instrumentation.langchain import (
+    LangChainInstrumentor,
+)
+
 from traceops.core.config import settings
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -8,7 +14,7 @@ _instrumented = False
 
 def setup_tracing():
     """
-    Phoenix tracing disabled temporarily.
+    Initialize Phoenix tracing.
     """
 
     global _instrumented
@@ -16,19 +22,26 @@ def setup_tracing():
     if _instrumented:
         return
 
-    if not settings.phoenix_api_key:
-        logger.warning("Phoenix API key missing — tracing disabled.")
-        _instrumented = True
-        return
+    # Local Phoenix (no auth)
+    if "localhost" in settings.phoenix_collector_endpoint:
+        tracer_provider = register(
+            project_name="traceops-lite",
+            endpoint=(
+                f"{settings.phoenix_collector_endpoint}/v1/traces"
+            ),
+        )
 
-    from phoenix.otel import register
-    from openinference.instrumentation.langchain import LangChainInstrumentor
-
-    tracer_provider = register(
-        project_name="traceops-lite",
-        endpoint=f"{settings.phoenix_collector_endpoint}/v1/traces",
-        headers={"api_key": settings.phoenix_api_key},
-    )
+    # Cloud Phoenix
+    else:
+        tracer_provider = register(
+            project_name="traceops-lite",
+            endpoint=(
+                f"{settings.phoenix_collector_endpoint}/v1/traces"
+            ),
+            headers={
+                "api_key": settings.phoenix_api_key
+            },
+        )
 
     LangChainInstrumentor().instrument(
         tracer_provider=tracer_provider
@@ -36,4 +49,6 @@ def setup_tracing():
 
     _instrumented = True
 
-    logger.info("Phoenix tracing initialized")
+    logger.info(
+        "Phoenix tracing initialized"
+    )
