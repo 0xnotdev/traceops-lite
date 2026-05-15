@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Gemini
-    gemini_api_key: str
+    # OpenRouter
+    openrouter_api_key: str
 
     # Phoenix
     phoenix_api_key: str = ""

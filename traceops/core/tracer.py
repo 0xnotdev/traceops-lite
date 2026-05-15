@@ -1,10 +1,5 @@
-from phoenix.otel import register
-from openinference.instrumentation.langchain import LangChainInstrumentor
-
 from traceops.core.config import settings
-
 import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +8,7 @@ _instrumented = False
 
 def setup_tracing():
     """
-    Call once at app startup.
-    Instruments all LangChain/LangGraph calls automatically.
+    Phoenix tracing disabled temporarily.
     """
 
     global _instrumented
@@ -22,12 +16,18 @@ def setup_tracing():
     if _instrumented:
         return
 
+    if not settings.phoenix_api_key:
+        logger.warning("Phoenix API key missing — tracing disabled.")
+        _instrumented = True
+        return
+
+    from phoenix.otel import register
+    from openinference.instrumentation.langchain import LangChainInstrumentor
+
     tracer_provider = register(
         project_name="traceops-lite",
         endpoint=f"{settings.phoenix_collector_endpoint}/v1/traces",
-        headers={
-            "api_key": settings.phoenix_api_key
-        } if settings.phoenix_api_key else {},
+        headers={"api_key": settings.phoenix_api_key},
     )
 
     LangChainInstrumentor().instrument(

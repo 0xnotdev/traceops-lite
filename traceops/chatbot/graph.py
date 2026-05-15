@@ -3,7 +3,7 @@ import logging
 
 from langgraph.graph import StateGraph, END
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from traceops.chatbot.documents import get_vectorstore
@@ -50,7 +50,7 @@ def retrieve_node(state: ChatState) -> ChatState:
     return state
 
 
-# ── Node: generate answer with Gemini ────────────────────
+# ── Node: generate answer with OpenRouter ────────────────────
 def generate_node(state: ChatState) -> ChatState:
     context = "\n\n---\n\n".join(state["retrieved_chunks"])
 
@@ -67,9 +67,10 @@ def generate_node(state: ChatState) -> ChatState:
         HumanMessage(content=state["question"]),
     ]
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
-        google_api_key=settings.gemini_api_key,
+    llm = ChatOpenAI(
+        model="openrouter/auto",
+        api_key=settings.openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1",
         temperature=0,
     )
 
@@ -78,6 +79,7 @@ def generate_node(state: ChatState) -> ChatState:
     state["answer"] = response.content
 
     return state
+
 
 # ── Build the graph ───────────────────────────────────────
 def build_rag_graph():
