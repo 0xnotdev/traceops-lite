@@ -15,40 +15,45 @@ async def get_trace(
     trace_id: str,
 ) -> dict:
     """
-    Fetch all spans for a given trace_id
-    from Arize Phoenix.
+    Fetch spans for a trace from Phoenix.
     """
 
-    # If Phoenix not configured
-    if not settings.phoenix_api_key:
-        logger.warning(
-            "Phoenix API key missing."
+    headers = {}
+
+    # Only use API key for cloud Phoenix
+    if (
+        settings.phoenix_api_key
+        and "127.0.0.1" not in PHOENIX_BASE
+        and "localhost" not in PHOENIX_BASE
+    ):
+        headers["api_key"] = (
+            settings.phoenix_api_key
         )
 
-        return {
-            "trace_id": trace_id,
-            "data": [],
-            "mock": True,
-        }
-
-    headers = {
-        "api_key": settings.phoenix_api_key
-    }
+    project_name = "traceops-lite"
 
     async with httpx.AsyncClient(
         timeout=15.0
     ) as client:
 
         try:
+
             resp = await client.get(
                 (
                     f"{PHOENIX_BASE}"
-                    f"/v1/traces/{trace_id}/spans"
+                    f"/v1/projects/"
+                    f"{project_name}"
+                    f"/spans"
                 ),
                 headers=headers,
+                params={
+                    "trace_id": trace_id,
+                },
             )
 
             resp.raise_for_status()
+
+            
 
             data = resp.json()
 
@@ -60,37 +65,14 @@ async def get_trace(
 
             return data
 
-        except httpx.HTTPStatusError as e:
-
-            if e.response.status_code == 404:
-
-                logger.warning(
-                    f"Trace {trace_id} "
-                    "not found yet. "
-                    "Phoenix indexing may "
-                    "still be in progress."
-                )
-
-                return {
-                    "trace_id": trace_id,
-                    "data": [],
-                    "not_found": True,
-                }
+        except Exception as e:
 
             logger.error(
-                f"Phoenix HTTP error: {e}"
-            )
-
-            raise
-
-        except httpx.RequestError as e:
-
-            logger.error(
-                f"Phoenix connection error: {e}"
+                f"Phoenix fetch failed: {e}"
             )
 
             return {
                 "trace_id": trace_id,
                 "data": [],
-                "connection_error": str(e),
+                "error": str(e),
             }
